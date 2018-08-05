@@ -25,29 +25,33 @@
 // with ES6 syntax (as of August 2018) this app is written in ES5. 
 //
 
-function EventTracker(eventName) {
-  this.eventName = eventName;
+function EventTracker(name) {
+  this.name = name;
   this.events = [];
 }
 
 EventTracker.prototype.on = function (eventName, callback) {
-  console.log('Entered "on"');
-  this.events.push( {eventName: eventName, callback: callback} );
-}
+  this.events.push( {type: 'on', eventName: eventName, callback: callback, tracker: this });
+};
 
 EventTracker.prototype.notify = function (evtTracker, eventName) {
-  console.log('Entered "notify"');
-  evtTracker.trigger(eventName, null);
-}
+  this.events.push( { type: 'notify', eventName: eventName, callback: null, tracker: evtTracker });
+};
 
 EventTracker.prototype.trigger = function (eventName, callbackParms) {
-  console.log('Entered "trigger"');
-  var event = this.events.find(function(entry) {
-    return entry.eventName === eventName;
+  var event = this.events.forEach(function(entry) {
+    if (entry.eventName === eventName) {
+      switch (entry.type) {
+        case 'on':
+          entry.callback.call(entry.tracker, callbackParms);
+          break;
+        case 'notify':
+          entry.tracker.trigger(entry.eventName, callbackParms);
+        break;
+      }
+    }
   });
-  console.log('event: ', event);
-  event.callback(callbackParms);
-}
+};
 
 // Test the functionality of the EventTracker system
 function purchase(item) { 
@@ -67,7 +71,20 @@ nephewParties.notify( richard, 'mainEvent' );
 
 nephewParties.trigger( 'mainEvent', 'ice cream' );
 
-// Log the attributes for each instance of the EventTracker class to
-// aid in debugging
-console.log('newphewParties events: ', nephewParties.events);
-console.log('richard events: ', richard.events);
+// Additional tests
+console.log('\n');
+var parent1 = new EventTracker('parent 1');
+var parent2 = new EventTracker('parent 2');
+var child = new EventTracker('dispatcher');
+
+parent1.on('christmas_morning', function (param) {
+  console.log('Parent 1 received event');
+});
+
+parent2.on('christmas_morning', function (param) {
+  console.log('Parent 2 received event - param:', param);
+});
+
+child.notify(parent1, 'christmas_morning');
+child.notify(parent2, 'christmas_morning');
+child.trigger('christmas_morning', 'presents!');
